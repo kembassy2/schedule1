@@ -1,6 +1,6 @@
 {
-  "name": "출퇴근 휴무신청 관리시트",
-  "short_name": "휴무관리",
+  "name": "A조 휴무신청 관리시트",
+  "short_name": "A조휴무",
   "description": "팀 휴무 신청, 근무 현황판, 급여명세표를 한 번에 관리하는 앱",
   "start_url": "./index.html",
   "scope": "./",
