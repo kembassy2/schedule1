@@ -1,4 +1,4 @@
-const CACHE_NAME = 'team-schedule-cache-v20';
+const CACHE_NAME = 'team-schedule-cache-v22';
 const APP_SHELL = [
   './',
   './index.html',
