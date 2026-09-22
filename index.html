@@ -671,18 +671,40 @@
         updateFbStatusText("☁ Firebase 실시간 동기화 완료!", true);
 
         firebaseDb.ref(TEAM_KEY).on('value', (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            isFirebaseSyncing = true;
-            Object.keys(val).forEach(dbKey => {
-              const originalKey = restoreDbKey(dbKey);
-              const stringVal = typeof val[dbKey] === 'object' ? JSON.stringify(val[dbKey]) : String(val[dbKey]);
-              memoryFallback[originalKey] = stringVal;
-              lsSet(originalKey, stringVal);
-            });
+          try {
+            const val = snapshot.val();
+            console.log("[FB sync] value event received. keys:", val ? Object.keys(val) : null);
+            if (val) {
+              isFirebaseSyncing = true;
+              try {
+                Object.keys(val).forEach(dbKey => {
+                  try {
+                    const originalKey = restoreDbKey(dbKey);
+                    const stringVal = typeof val[dbKey] === 'object' ? JSON.stringify(val[dbKey]) : String(val[dbKey]);
+                    memoryFallback[originalKey] = stringVal;
+                    lsSet(originalKey, stringVal);
+                  } catch(inner){ console.warn("[FB sync] key sync skipped:", dbKey, inner); }
+                });
+                console.log("[FB sync] localStorage updated from remote, syncing done.");
+              } finally {
+                isFirebaseSyncing = false;
+              }
+              if (renderCb) {
+                Promise.resolve().then(renderCb).then(()=>{
+                  console.log("[FB sync] renderCb completed OK.");
+                }).catch(renderErr => {
+                  console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
+                });
+              }
+            }
+          } catch(cbErr) {
             isFirebaseSyncing = false;
-            if (renderCb) renderCb();
+            console.warn("[FB sync] value callback error", cbErr);
           }
+        }, (err) => {
+          isFirebaseSyncing = false;
+          console.warn("[FB sync] listen error", err);
+          updateFbStatusText("연동 실패(권한/네트워크 확인): " + (err && err.message || err), false);
         });
       }
     } catch(e) {
@@ -782,15 +804,15 @@
       if(v){
         try{
           const parsed = typeof v === 'object' ? v : JSON.parse(v);
-          let selections = parsed.selections || {};
+          let selections = (parsed.selections && typeof parsed.selections === 'object' && !Array.isArray(parsed.selections)) ? parsed.selections : {};
           Object.keys(selections).forEach(k=>{
             selections[k] = (selections[k]||[]).map(e => typeof e === 'number' ? {idx:e, type:'월차'} : e);
           });
           state.monthData = {
-            legalHolidays: parsed.legalHolidays || parsed.holidays || autoFillLegalHolidays(state.year, state.month),
-            tempHolidays: parsed.tempHolidays || [],
+            legalHolidays: (Array.isArray(parsed.legalHolidays) ? parsed.legalHolidays : (Array.isArray(parsed.holidays) ? parsed.holidays : autoFillLegalHolidays(state.year, state.month))),
+            tempHolidays: Array.isArray(parsed.tempHolidays) ? parsed.tempHolidays : [],
             selections,
-            fixedOverrides: parsed.fixedOverrides || {}
+            fixedOverrides: (parsed.fixedOverrides && typeof parsed.fixedOverrides === 'object' && !Array.isArray(parsed.fixedOverrides)) ? parsed.fixedOverrides : {}
           };
         }catch(e){ state.monthData = { legalHolidays: autoFillLegalHolidays(state.year, state.month), tempHolidays: [], selections: {}, fixedOverrides: {} }; }
       } else {
@@ -1028,15 +1050,15 @@
     if(v){
       try{
         const parsed = JSON.parse(v);
-        let selections = parsed.selections || {};
+        let selections = (parsed.selections && typeof parsed.selections === 'object' && !Array.isArray(parsed.selections)) ? parsed.selections : {};
         Object.keys(selections).forEach(k=>{
           selections[k] = (selections[k]||[]).map(e => typeof e === 'number' ? {idx:e, type:'월차'} : e);
         });
         data = {
           legalHolidays: parsed.legalHolidays || [],
-          tempHolidays: parsed.tempHolidays || [],
+          tempHolidays: Array.isArray(parsed.tempHolidays) ? parsed.tempHolidays : [],
           selections,
-          fixedOverrides: parsed.fixedOverrides || {}
+          fixedOverrides: (parsed.fixedOverrides && typeof parsed.fixedOverrides === 'object' && !Array.isArray(parsed.fixedOverrides)) ? parsed.fixedOverrides : {}
         };
       }catch(e){}
     }
@@ -1738,18 +1760,40 @@
         updateFbStatusText("☁ Firebase 실시간 동기화 완료!", true);
 
         firebaseDb.ref(TEAM_KEY).on('value', (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            isFirebaseSyncing = true;
-            Object.keys(val).forEach(dbKey => {
-              const originalKey = restoreDbKey(dbKey);
-              const stringVal = typeof val[dbKey] === 'object' ? JSON.stringify(val[dbKey]) : String(val[dbKey]);
-              memoryFallback[originalKey] = stringVal;
-              lsSet(originalKey, stringVal);
-            });
+          try {
+            const val = snapshot.val();
+            console.log("[FB sync] value event received. keys:", val ? Object.keys(val) : null);
+            if (val) {
+              isFirebaseSyncing = true;
+              try {
+                Object.keys(val).forEach(dbKey => {
+                  try {
+                    const originalKey = restoreDbKey(dbKey);
+                    const stringVal = typeof val[dbKey] === 'object' ? JSON.stringify(val[dbKey]) : String(val[dbKey]);
+                    memoryFallback[originalKey] = stringVal;
+                    lsSet(originalKey, stringVal);
+                  } catch(inner){ console.warn("[FB sync] key sync skipped:", dbKey, inner); }
+                });
+                console.log("[FB sync] localStorage updated from remote, syncing done.");
+              } finally {
+                isFirebaseSyncing = false;
+              }
+              if (renderCb) {
+                Promise.resolve().then(renderCb).then(()=>{
+                  console.log("[FB sync] renderCb completed OK.");
+                }).catch(renderErr => {
+                  console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
+                });
+              }
+            }
+          } catch(cbErr) {
             isFirebaseSyncing = false;
-            if (renderCb) renderCb();
+            console.warn("[FB sync] value callback error", cbErr);
           }
+        }, (err) => {
+          isFirebaseSyncing = false;
+          console.warn("[FB sync] listen error", err);
+          updateFbStatusText("연동 실패(권한/네트워크 확인): " + (err && err.message || err), false);
         });
       }
     } catch(e) {
@@ -1833,14 +1877,14 @@
       if(v){
         try{
           const parsed = typeof v === 'object' ? v : JSON.parse(v);
-          let selections = parsed.selections || {};
+          let selections = (parsed.selections && typeof parsed.selections === 'object' && !Array.isArray(parsed.selections)) ? parsed.selections : {};
           Object.keys(selections).forEach(k=>{
             selections[k] = (selections[k]||[]).map(e => typeof e === 'number' ? {idx:e, type:'월차'} : e);
           });
           state.monthData = {
-            legalHolidays: parsed.legalHolidays || parsed.holidays || autoFillLegalHolidays(state.year, state.month),
-            tempHolidays: parsed.tempHolidays || [],
-            selections, fixedOverrides: parsed.fixedOverrides || {}
+            legalHolidays: (Array.isArray(parsed.legalHolidays) ? parsed.legalHolidays : (Array.isArray(parsed.holidays) ? parsed.holidays : autoFillLegalHolidays(state.year, state.month))),
+            tempHolidays: Array.isArray(parsed.tempHolidays) ? parsed.tempHolidays : [],
+            selections, fixedOverrides: (parsed.fixedOverrides && typeof parsed.fixedOverrides === 'object' && !Array.isArray(parsed.fixedOverrides)) ? parsed.fixedOverrides : {}
           };
         }catch(e){ state.monthData = { legalHolidays: autoFillLegalHolidays(state.year,state.month), tempHolidays: [], selections: {}, fixedOverrides: {} }; }
       } else {
@@ -1956,7 +2000,7 @@
       const v = await storageGet(monthKey(y, mm), true);
       if(v){
         const parsed = typeof v === 'object' ? v : JSON.parse(v);
-        let selections = parsed.selections || {};
+        let selections = (parsed.selections && typeof parsed.selections === 'object' && !Array.isArray(parsed.selections)) ? parsed.selections : {};
         Object.keys(selections).forEach(k=>{
           selections[k] = (selections[k]||[]).map(e => typeof e === 'number' ? {idx:e, type:'월차'} : e);
         });
