@@ -74,6 +74,11 @@
   .stat-card.today-card .label{ color: #CFE3E7; }
   .stat-card.today-card .value{ color: #fff; }
   .stat-card.today-card .sub{ color: #E4EEF0; }
+  .stat-card.triple-card{display:flex;align-items:stretch;padding:10px 4px;}
+  .stat-card.triple-card .triple-item{flex:1;min-width:0;text-align:center;padding:0 4px;}
+  .stat-card.triple-card .triple-item + .triple-item{border-left:1px solid var(--line);}
+  .stat-card.triple-card .label{font-size:10px;margin-bottom:3px;}
+  .stat-card.triple-card .value{font-size:16px;}
 
   .panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
@@ -252,6 +257,11 @@
   .top-stats .tcard.highlight .v{color:var(--accent-strong);}
   .top-stats .tcard .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.3;}
   .top-stats .tcard.wide{grid-column:1 / -1;}
+  .top-stats .tcard.triple-card{display:flex;align-items:stretch;padding:8px 4px;}
+  .top-stats .tcard.triple-card .triple-item{flex:1;min-width:0;text-align:center;padding:0 4px;}
+  .top-stats .tcard.triple-card .triple-item + .triple-item{border-left:1px solid var(--line);}
+  .top-stats .tcard.triple-card .l{font-size:11px;}
+  .top-stats .tcard.triple-card .v{font-size:15px;}
 
   /* Board: employee picker + mini calendar */
   .emp-select-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;}
@@ -368,8 +378,6 @@
   .w-chip.work .w-tag{background:var(--accent-strong,#1E4652);color:#fff;}
   .w-chip.jotoe .w-tag{background:#B8792C;color:#fff;}
   .w-chip.off .w-tag{background:#8A94A6;color:#fff;}
-  .copy-worker-btn{background:var(--accent,#2C5F6F);color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:13.5px;font-weight:700;cursor:pointer;width:100%;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;}
-  .copy-worker-btn:hover{background:var(--accent-strong,#1E4652);}
 
 </style>
 </head>
@@ -570,10 +578,6 @@
         <span>휴무 / 부재 직원 명단</span>
       </div>
       <div class="worker-grid" id="workerModalOffGrid"></div>
-
-      <button class="copy-worker-btn" id="copyWorkerListBtn">
-        <span>📋 근무자 명단 텍스트 복사</span>
-      </button>
     </div>
   </div>
 </div>
@@ -587,6 +591,9 @@
 (function(){
   const DOW = ['일','월','화','수','목','금','토'];
   const STAFF_COUNT = 15;
+  function isPlaceholderStaffName(name, idx){ return !name || name === ('직원' + (idx+1)); }
+  function realStaffIndices(){ return state.staffNames.map((n,i)=>i).filter(i=>!isPlaceholderStaffName(state.staffNames[i], i)); }
+  function realStaffCount(){ return realStaffIndices().length; }
   const MAX_OFF_WORKDAY = 15;
   const MIN_WORKING = 0;
   const LEAVE_TYPES = ['휴무','월차','조퇴','대체','병가','결근'];
@@ -906,6 +913,7 @@
 
     for(let i=0; i<STAFF_COUNT; i++){
       const name = state.staffNames[i];
+      if(isPlaceholderStaffName(name, i)) continue;
       if(c.isFixedWeekly){
         const type = typeForFixed(c, i);
         const hours = hoursForFixed(c, i);
@@ -947,15 +955,17 @@
     document.getElementById('statsRow').innerHTML = `
       <div class="stat-card"><div class="label">화·수 정기휴무</div><div class="value">${s.fixedTotal}일</div><div class="sub">화 ${s.tue} · 수 ${s.wed}</div></div>
       <div class="stat-card highlight"><div class="label">추가 휴무일 (참고)</div><div class="value">${s.extraOff}일</div><div class="sub">(토${s.sat}+일${s.sun}+공휴일${s.legalForCompare}=${s.comparePool}) − 화수${s.fixedTotal} = ${s.baseExtraOff}일<br>+ 등록된 대체휴일 ${s.temp}일 = ${s.extraOff}일<br>공휴일은 토·일·화·수 제외</div></div>
-      <div class="stat-card"><div class="label">법정공휴일</div><div class="value">${s.legal}일</div></div>
-      <div class="stat-card"><div class="label">대체휴일</div><div class="value">${s.temp}일</div></div>
-      <div class="stat-card"><div class="label">근무일수</div><div class="value">${s.workdays}일</div></div>
+      <div class="stat-card triple-card" style="grid-column:1/-1;">
+        <div class="triple-item"><div class="label">법정공휴일</div><div class="value">${s.legal}일</div></div>
+        <div class="triple-item"><div class="label">대체휴일</div><div class="value">${s.temp}일</div></div>
+        <div class="triple-item"><div class="label">근무일수</div><div class="value">${s.workdays}일</div></div>
+      </div>
       <div class="stat-card today-card" id="pcTodayWorkerCard" title="클릭하여 전체 명단 팝업 열기">
         <div class="label" style="display:flex;justify-content:space-between;align-items:center;">
           <span>👥 ${dayLabel} 근무자</span>
           <span style="font-size:10px;background:rgba(255,255,255,0.25);padding:1px 5px;border-radius:4px;font-weight:700;">팝업 ↗</span>
         </div>
-        <div class="value" style="font-size:19px;">${info.workingList.length}명 <span style="font-size:12px;opacity:0.85;font-weight:normal;">/ ${STAFF_COUNT}명</span></div>
+        <div class="value" style="font-size:19px;">${info.workingList.length}명 <span style="font-size:12px;opacity:0.85;font-weight:normal;">/ ${realStaffCount()}명</span></div>
         <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${namesPreview}">${namesPreview}</div>
       </div>
     `;
@@ -1115,17 +1125,24 @@
         const exceptionIdx = Object.keys(overrides).map(k=>parseInt(k,10));
         const chips = exceptionIdx.length === 0
           ? `<span class="name-chip all">전원 정기휴무</span>`
-          : exceptionIdx.map(i=>`<span class="name-chip fixed-chip">${maskNameSheet(state.staffNames[i])}<span class="type-tag">${overrides[i]}</span><button data-day="${d}" data-idx="${i}" class="fixedRmSel" title="정기휴무로 되돌리기">×</button></span>`).join('');
+          : exceptionIdx.map(i=>{
+              const ovVal = overrides[i];
+              const ovType = typeof ovVal === 'object' ? ovVal.type : ovVal;
+              const ovHours = typeof ovVal === 'object' ? (ovVal.hours||1) : 1;
+              const tagTxt = ovType === '조퇴' ? `조퇴 ${ovHours}h` : ovType;
+              return `<span class="name-chip fixed-chip">${maskNameSheet(state.staffNames[i])}<span class="type-tag">${tagTxt}</span><button data-day="${d}" data-idx="${i}" class="fixedRmSel" title="정기휴무로 되돌리기">×</button></span>`;
+            }).join('');
         const fixedTypeOptions = FIXED_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
-        const fixedNameOptions = state.staffNames.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+        const fixedNameOptions = realStaffIndices().map(i=>`<option value="${i}">${state.staffNames[i]}</option>`).join('');
         namesHtml = `<div class="name-chip-list">${chips}</div>
-          <div class="add-row">
+          <div class="add-row" style="align-items:center;">
             <select class="fixedAddName" data-day="${d}">
               <option value="">직원 선택</option>
-              <option value="all">전체 선택 (${STAFF_COUNT}명)</option>
+              <option value="all">전체 선택 (${realStaffCount()}명)</option>
               ${fixedNameOptions}
             </select>
             <select class="fixedAddType" data-day="${d}">${fixedTypeOptions}</select>
+            <input type="number" class="fixedAddHours" data-day="${d}" min="0.5" max="8" step="0.5" value="1" placeholder="시간(h)" title="조퇴 시간(h)" style="width:58px;padding:4px 5px;border:1px solid var(--line);border-radius:6px;font-size:12px;display:none;">
             <button class="btn small fixedAddBtn" data-day="${d}" style="padding:4px 10px;font-size:11.5px;">추가</button>
           </div>`;
       } else if(c.isTemp){
@@ -1133,19 +1150,22 @@
       } else {
         const entries = state.monthData.selections[c.key] || [];
         const usedIdx = entries.map(e=>e.idx);
-        const chips = entries.map(e => `<span class="name-chip">${maskNameSheet(state.staffNames[e.idx])}<span class="type-tag">${e.type}</span><button data-day="${d}" data-idx="${e.idx}" class="rmSel">×</button></span>`).join('');
-        const nameOptions = state.staffNames.map((n,i)=> usedIdx.includes(i) ? '' : `<option value="${i}">${n}</option>`).join('');
+        const chips = entries.map(e => {
+          const tagTxt = e.type === '조퇴' ? `조퇴 ${e.hours||1}h` : e.type;
+          return `<span class="name-chip">${maskNameSheet(state.staffNames[e.idx])}<span class="type-tag">${tagTxt}</span><button data-day="${d}" data-idx="${e.idx}" class="rmSel">×</button></span>`;
+        }).join('');
+        const nameOptions = realStaffIndices().map(i=> usedIdx.includes(i) ? '' : `<option value="${i}">${state.staffNames[i]}</option>`).join('');
         const typeOptions = LEAVE_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
         const full = entries.length >= MAX_OFF_WORKDAY;
-        const remaining = MAX_OFF_WORKDAY - entries.length;
         namesHtml = `<div class="name-chip-list">${chips}</div>
-          <div class="add-row">
+          <div class="add-row" style="align-items:center;">
             <select class="addName" data-day="${d}" ${full?'disabled':''}>
-              <option value="">${full ? '정원(15명) 마감' : '직원 선택'}</option>
+              <option value="">${full ? `정원(${realStaffCount()}명) 마감` : '직원 선택'}</option>
               ${full ? '' : `<option value="all">전체 선택</option>`}
               ${nameOptions}
             </select>
             <select class="addType" data-day="${d}" ${full?'disabled':''}>${typeOptions}</select>
+            <input type="number" class="addHours" data-day="${d}" min="0.5" max="8" step="0.5" value="1" placeholder="시간(h)" title="조퇴 시간(h)" style="width:58px;padding:4px 5px;border:1px solid var(--line);border-radius:6px;font-size:12px;display:none;" ${full?'disabled':''}>
             <button class="btn small addBtn" data-day="${d}" ${full?'disabled':''} style="padding:4px 10px;font-size:11.5px;">추가</button>
           </div>`;
       }
@@ -1165,6 +1185,20 @@
     body += '</tbody>';
     table.innerHTML = head + body;
 
+    // 조퇴 선택 시 시간 입력 필드 자동 토글
+    table.querySelectorAll('.fixedAddType').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const hInp = sel.closest('.add-row').querySelector('.fixedAddHours');
+        if(hInp) hInp.style.display = sel.value === '조퇴' ? 'inline-block' : 'none';
+      });
+    });
+    table.querySelectorAll('.addType').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const hInp = sel.closest('.add-row').querySelector('.addHours');
+        if(hInp) hInp.style.display = sel.value === '조퇴' ? 'inline-block' : 'none';
+      });
+    });
+
     table.querySelectorAll('.fixedRmSel').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const d = parseInt(btn.dataset.day,10);
@@ -1181,20 +1215,23 @@
         const row = btn.closest('td');
         const nameSel = row.querySelector('.fixedAddName');
         const typeSel = row.querySelector('.fixedAddType');
+        const hoursInp = row.querySelector('.fixedAddHours');
         if(!nameSel.value){ showToast('직원을 선택해주세요.'); return; }
         const type = typeSel.value;
+        const hours = (type === '조퇴' && hoursInp) ? (parseFloat(hoursInp.value) || 1) : 1;
+        const entryVal = type === '조퇴' ? { type: '조퇴', hours } : type;
         const key = dateKey(y,m,d);
         if(!state.monthData.fixedOverrides[key]) state.monthData.fixedOverrides[key] = {};
         if(nameSel.value === 'all'){
-          for(let idx=0; idx<STAFF_COUNT; idx++){
+          realStaffIndices().forEach(idx=>{
             if(type === '정기휴무'){ delete state.monthData.fixedOverrides[key][idx]; }
-            else { state.monthData.fixedOverrides[key][idx] = type; }
-          }
-          showToast(`전체 ${STAFF_COUNT}명에게 '${type}' 적용했습니다.`);
+            else { state.monthData.fixedOverrides[key][idx] = entryVal; }
+          });
+          showToast(`전체 ${realStaffCount()}명에게 '${type}' 적용했습니다.`);
         } else {
           const idx = parseInt(nameSel.value,10);
           if(type === '정기휴무'){ delete state.monthData.fixedOverrides[key][idx]; }
-          else { state.monthData.fixedOverrides[key][idx] = type; }
+          else { state.monthData.fixedOverrides[key][idx] = entryVal; }
         }
         await saveMonthData();
         renderSheet(); renderRoster(); renderBoard(); renderPayroll();
@@ -1217,27 +1254,34 @@
         const row = btn.closest('td');
         const nameSel = row.querySelector('.addName');
         const typeSel = row.querySelector('.addType');
+        const hoursInp = row.querySelector('.addHours');
         if(!nameSel.value){ showToast('직원을 선택해주세요.'); return; }
         const type = typeSel.value;
+        const hours = (type === '조퇴' && hoursInp) ? (parseFloat(hoursInp.value) || 1) : 1;
+        const entryObj = type === '조퇴' ? { idx: 0, type, hours } : { idx: 0, type };
         const key = dateKey(y,m,d);
         const arr = state.monthData.selections[key] || [];
         if(nameSel.value === 'all'){
           const remaining = MAX_OFF_WORKDAY - arr.length;
           if(remaining <= 0){ showToast('해당 날짜는 이미 15명(전원) 신청했습니다.'); return; }
           const usedIdx = arr.map(e=>e.idx);
-          const candidates = state.staffNames.map((_,i)=>i).filter(i=>!usedIdx.includes(i));
+          const candidates = realStaffIndices().filter(i=>!usedIdx.includes(i));
           const toAdd = candidates.slice(0, remaining);
-          toAdd.forEach(idx => arr.push({idx, type}));
+          toAdd.forEach(idx => {
+            arr.push(type === '조퇴' ? { idx, type, hours } : { idx, type });
+          });
           state.monthData.selections[key] = arr;
           if(candidates.length > toAdd.length){
-            showToast(`정원(15명)으로 인해 ${toAdd.length}명만 '${type}' 적용했습니다.`);
+            showToast(`정원(${realStaffCount()}명)으로 인해 ${toAdd.length}명만 '${type}' 적용했습니다.`);
           } else {
             showToast(`${toAdd.length}명에게 '${type}' 적용했습니다.`);
           }
         } else {
           const idx = parseInt(nameSel.value,10);
           if(arr.length >= MAX_OFF_WORKDAY){ showToast('해당 날짜는 이미 15명(전원) 신청했습니다.'); return; }
-          if(!arr.some(e=>e.idx===idx)) arr.push({idx, type});
+          if(!arr.some(e=>e.idx===idx)){
+            arr.push(type === '조퇴' ? { idx, type, hours } : { idx, type });
+          }
           state.monthData.selections[key] = arr;
         }
         await saveMonthData();
@@ -1260,12 +1304,18 @@
     const y=state.year, m=state.month;
     const c = classify(y,m,d);
     let cellCls=''; let label='';
-    if(c.isFixedWeekly){ cellCls='fixed'; label=boardLabel(typeForFixed(c,i)); }
+    if(c.isFixedWeekly){
+      cellCls='fixed';
+      label=boardLabel(typeForFixed(c,i), hoursForFixed(c,i));
+    }
     else if(c.isTemp){ cellCls='fixed'; label='휴무'; }
     else {
       const entries = state.monthData.selections[c.key] || [];
       const mine = entries.find(e=>e.idx===i);
-      if(mine){ cellCls='extra'; label=boardLabel(mine.type); }
+      if(mine){
+        cellCls='extra';
+        label=boardLabel(mine.type, mine.hours || 1);
+      }
     }
     return `<td class="${cellCls}">${label}</td>`;
   }
@@ -1294,14 +1344,18 @@
     let headRow2 = secondDays.map(dateHeaderCell).join('') + pad(maxCols - secondDays.length);
 
     let body = '';
+    let dispRow = 0;
     for(let i=0;i<STAFF_COUNT;i++){
+      if(isPlaceholderStaffName(state.staffNames[i], i)) continue;
+      dispRow++;
       let totalWorkDays = 0;
       let monthlyLeaveCount = 0;
       for(let d=1; d<=dim; d++){
         const c = classify(y,m,d);
         if(c.isFixedWeekly){
-          const overrides = state.monthData.fixedOverrides[c.key] || {};
-          if(overrides[i]==='월차') monthlyLeaveCount++;
+          const type = typeForFixed(c, i);
+          if(type==='월차') monthlyLeaveCount++;
+          if(type==='대체' || type==='조퇴') totalWorkDays++;
           continue;
         }
         if(c.isTemp) continue; // 대체휴일: 전원 휴무, 근무일 계산 제외
@@ -1309,10 +1363,15 @@
         const mine = entries.find(e=>e.idx===i);
         if(!mine) totalWorkDays++;
         else if(mine.type === '월차') monthlyLeaveCount++;
+        else if(mine.type === '조퇴') totalWorkDays++;
       }
-      const rowA = `<tr><th rowspan="2" class="num-col">${i+1}</th><th rowspan="2" class="name-col">${maskNameBoard(state.staffNames[i])}</th>`
+      const wle = computeWeeklyEarlyLeave(i, state.monthData, y, m);
+      const totalWolcha = monthlyLeaveCount + wle.autoLeaveUsed;
+      const wolchaLabel = wle.autoLeaveUsed > 0 ? `${totalWolcha}<span style="font-size:10px;color:var(--legal);display:block;">(조퇴→+${wle.autoLeaveUsed})</span>` : totalWolcha;
+
+      const rowA = `<tr><th rowspan="2" class="num-col">${dispRow}</th><th rowspan="2" class="name-col">${maskNameBoard(state.staffNames[i])}</th>`
         + firstDays.map(d=>dataCell(d,i)).join('') + padTd(maxCols - firstDays.length)
-        + `<td rowspan="2"><strong>${totalWorkDays}</strong></td><td rowspan="2"><strong>${monthlyLeaveCount}</strong></td></tr>`;
+        + `<td rowspan="2"><strong>${totalWorkDays}</strong></td><td rowspan="2"><strong>${wolchaLabel}</strong></td></tr>`;
       const rowB = `<tr>` + secondDays.map(d=>dataCell(d,i)).join('') + padTd(maxCols - secondDays.length) + `</tr>`;
       body += rowA + rowB;
     }
@@ -1342,12 +1401,20 @@
       let names;
       if(c.isFixedWeekly){
         const overrides = state.monthData.fixedOverrides[c.key] || {};
-        names = Object.keys(overrides).length===0 ? '전원(정기휴무)' : Object.keys(overrides).map(k=>{const i=parseInt(k,10); return `${state.staffNames[i]}(${overrides[i]})`;}).join(', ');
+        names = Object.keys(overrides).length===0 ? '전원(정기휴무)' : Object.keys(overrides).map(k=>{
+          const i=parseInt(k,10);
+          const ov = overrides[k];
+          const t = typeof ov==='object'?`${ov.type} ${ov.hours||1}h`:ov;
+          return `${state.staffNames[i]}(${t})`;
+        }).join(', ');
       } else if(c.isTemp){
         names = '전원(대체휴일)';
       } else {
         const entries = state.monthData.selections[c.key]||[];
-        names = entries.map(e=>`${state.staffNames[e.idx]}(${e.type})`).join(', ');
+        names = entries.map(e=>{
+          const t = e.type==='조퇴'?`조퇴 ${e.hours||1}h`:e.type;
+          return `${state.staffNames[e.idx]}(${t})`;
+        }).join(', ');
       }
       const working = STAFF_COUNT - offCountFor(c);
       const remark = c.isAutoOff ? c.category : (working<MIN_WORKING ? '근무인원 부족' : '정상근무');
@@ -1355,10 +1422,10 @@
     }
     rows.push([]);
     rows.push([`직원별 월차·조퇴 누적 (연간, 1~${m}월)`]);
-    rows.push(['직원명','월차','조퇴']);
+    rows.push(['직원명','월차(소진합계)','조퇴(회)','조퇴(총시간)','조퇴→월차전환']);
     for(let i=0;i<state.staffNames.length;i++){
       const cnt = await personalYearlyCounts(i);
-      rows.push([state.staffNames[i], cnt.wolcha, cnt.jotoe]);
+      rows.push([state.staffNames[i], cnt.wolcha + cnt.autoLeaveUsed, cnt.jotoe, cnt.jotoeHours + 'h', cnt.autoLeaveUsed]);
     }
     const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
@@ -1382,7 +1449,7 @@
   // 대체: 정기휴무일에 정상 근무 시 일당+교통비 지급, 그 대신 쉬는 근무일은 무급(대체 사용)
   // 월차: 일당 지급, 교통비 미지급 / 정기휴무(기본값)·휴무·병가·결근: 일당·교통비 모두 미지급 (무급)
   // 병가가 있는 주는 주휴수당 지급 대상에서 제외됨
-  // 조퇴: 출근한 것으로 보아 정상 근무(일당+교통비) 처리
+  // 조퇴: 출근한 것으로 보아 정상 근무(일당+교통비) 처리 (주간 8시간 초과 시 월차 1개 자동 소진)
   let payrollMode = 'full';
 
   function won(n){ return Math.round(n).toLocaleString('ko-KR') + '원'; }
@@ -1411,8 +1478,7 @@
       const c = classify(y,m,d);
       const weekKey = d - c.dow;
       if(c.isFixedWeekly){
-        const ov = state.monthData.fixedOverrides[c.key] || {};
-        const type = ov[idx] || '정기휴무';
+        const type = typeForFixed(c, idx);
         if(type === '대체'){
           // 정기휴무일에 정상 근무 → 일당+교통비 지급 (대체근무)
           substituteWorkedDays++;
@@ -1453,6 +1519,9 @@
         if(mine.type === '병가') weeksWithSickLeave.add(weekKey);
       }
     }
+    // 주간 8시간 초과 조퇴 자동소진 월차 합산
+    const wle = computeWeeklyEarlyLeave(idx, state.monthData, y, m);
+    monthlyLeaveDays += wle.autoLeaveUsed;
     const regularDays = actualWorkDays - holidayWorkDays;
     const regularWage = regularDays * PAY.dailyWage;
     const holidayWage = holidayWorkDays * PAY.dailyWage * PAY.holidayMultiplier;
@@ -1490,14 +1559,17 @@
     let headHtml = '<thead><tr>' + head.map(h=>`<th>${h}</th>`).join('') + '</tr></thead>';
 
     let body = '<tbody>';
+    let dispRow = 0;
     state.staffNames.forEach((name,i)=>{
+      if(isPlaceholderStaffName(name, i)) return;
+      dispRow++;
       const p = computePayroll(i);
       const displayName = maskName(name);
       let cells;
       if(payrollMode === 'full'){
-        cells = [i+1, displayName, p.actualWorkDays+'일', p.holidayWorkDays+'일', p.substituteWorkedDays+'일', p.monthlyLeaveDays+'일', p.unpaidDays+'일', won(p.regularWage), won(p.holidayWage), won(p.substituteWage), won(p.monthlyLeaveWage), won(p.transport), won(p.weeklyAllowance), won(p.gross), won(p.pension), won(p.health), won(p.longTerm), won(p.employment), won(p.fullDeduction), `<strong>${won(p.netFull)}</strong>`];
+        cells = [dispRow, displayName, p.actualWorkDays+'일', p.holidayWorkDays+'일', p.substituteWorkedDays+'일', p.monthlyLeaveDays+'일', p.unpaidDays+'일', won(p.regularWage), won(p.holidayWage), won(p.substituteWage), won(p.monthlyLeaveWage), won(p.transport), won(p.weeklyAllowance), won(p.gross), won(p.pension), won(p.health), won(p.longTerm), won(p.employment), won(p.fullDeduction), `<strong>${won(p.netFull)}</strong>`];
       } else {
-        cells = [i+1, displayName, p.actualWorkDays+'일', p.holidayWorkDays+'일', p.substituteWorkedDays+'일', p.monthlyLeaveDays+'일', p.unpaidDays+'일', won(p.regularWage), won(p.holidayWage), won(p.substituteWage), won(p.monthlyLeaveWage), won(p.transport), won(p.weeklyAllowance), won(p.gross), won(p.employment), won(p.employment), `<strong>${won(p.netPartial)}</strong>`];
+        cells = [dispRow, displayName, p.actualWorkDays+'일', p.holidayWorkDays+'일', p.substituteWorkedDays+'일', p.monthlyLeaveDays+'일', p.unpaidDays+'일', won(p.regularWage), won(p.holidayWage), won(p.substituteWage), won(p.monthlyLeaveWage), won(p.transport), won(p.weeklyAllowance), won(p.gross), won(p.employment), won(p.employment), `<strong>${won(p.netPartial)}</strong>`];
       }
       body += '<tr>' + cells.map(c=>`<td>${c}</td>`).join('') + '</tr>';
     });
@@ -1591,6 +1663,9 @@
 (function(){
   const DOW = ['일','월','화','수','목','금','토'];
   const STAFF_COUNT = 15;
+  function isPlaceholderStaffName(name, idx){ return !name || name === ('직원' + (idx+1)); }
+  function realStaffIndices(){ return state.staffNames.map((n,i)=>i).filter(i=>!isPlaceholderStaffName(state.staffNames[i], i)); }
+  function realStaffCount(){ return realStaffIndices().length; }
   const MAX_OFF_WORKDAY = 15;
   const MIN_WORKING = 0;
   const LEAVE_TYPES = ['휴무','월차','조퇴','대체','병가','결근'];
@@ -1792,8 +1867,51 @@
     return {dow,key,isFixedWeekly,isLegal,isTemp,isAutoOff,category};
   }
   function offCountFor(c){ if(c.isAutoOff) return STAFF_COUNT; return (state.monthData.selections[c.key]||[]).length; }
-  function typeForFixed(c, idx){ const ov = state.monthData.fixedOverrides[c.key]; return (ov && ov[idx]) ? ov[idx] : '정기휴무'; }
-  function boardLabel(type){ return (type==='정기휴무'||type==='fixed') ? '휴무' : type; }
+  function typeForFixed(c, idx){
+    const ov = state.monthData.fixedOverrides[c.key];
+    if(!ov || ov[idx] === undefined) return '정기휴무';
+    const v = ov[idx];
+    return typeof v === 'object' ? v.type : v;
+  }
+  function hoursForFixed(c, idx){
+    const ov = state.monthData.fixedOverrides[c.key];
+    if(!ov || ov[idx] === undefined) return 0;
+    const v = ov[idx];
+    if(typeof v === 'object') return v.type === '조퇴' ? (v.hours || 1) : 0;
+    return v === '조퇴' ? 1 : 0;
+  }
+  function boardLabel(type, hours){
+    if(type === '정기휴무' || type === 'fixed') return '휴무';
+    if(type === '조퇴' && hours) return `조퇴${hours}h`;
+    return type;
+  }
+  function computeWeeklyEarlyLeave(idx, data, year, month){
+    const dim = daysInMonth(year, month);
+    const weekHours = {};
+    for(let d=1; d<=dim; d++){
+      const dow = new Date(year, month-1, d).getDay();
+      const key = dateKey(year, month, d);
+      const isFixedWeekly = dow===2 || dow===3;
+      const isTemp = (data.tempHolidays||[]).includes(key);
+      const weekKey = d - dow;
+      let hours = 0;
+      if(isFixedWeekly){
+        const ov = (data.fixedOverrides||{})[key] || {};
+        const v = ov[idx];
+        if(v !== undefined){
+          const type = typeof v === 'object' ? v.type : v;
+          if(type === '조퇴') hours = typeof v === 'object' ? (v.hours||1) : 1;
+        }
+      } else if(!isTemp){
+        const entry = ((data.selections||{})[key]||[]).find(e=>e.idx===idx);
+        if(entry && entry.type==='조퇴') hours = entry.hours||1;
+      }
+      if(hours > 0) weekHours[weekKey] = (weekHours[weekKey]||0) + hours;
+    }
+    let autoLeaveUsed=0, totalHours=0;
+    Object.values(weekHours).forEach(h=>{ totalHours+=h; if(h>8) autoLeaveUsed++; });
+    return {weekHours, totalHours, autoLeaveUsed};
+  }
   function maskNameSheet(name){
     const len = name.length;
     if(len <= 1) return name;
@@ -1807,18 +1925,25 @@
 
   function personalMonthlyCounts(idx){
     const y=state.year, m=state.month, dim=daysInMonth(y,m);
-    let wolcha=0, jotoe=0;
+    let wolcha=0, jotoe=0, jotoeHours=0;
     for(let d=1; d<=dim; d++){
       const c=classify(y,m,d);
       if(c.isFixedWeekly){
-        const ov=state.monthData.fixedOverrides[c.key]||{};
-        if(ov[idx]==='월차') wolcha++; if(ov[idx]==='조퇴') jotoe++;
+        const type = typeForFixed(c, idx);
+        const hrs = hoursForFixed(c, idx);
+        if(type==='월차') wolcha++;
+        if(type==='조퇴'){ jotoe++; jotoeHours += hrs; }
       } else if(!c.isAutoOff){
-        const mine=(state.monthData.selections[c.key]||[]).find(e=>e.idx===idx);
-        if(mine){ if(mine.type==='월차') wolcha++; if(mine.type==='조퇴') jotoe++; }
+        const entries = state.monthData.selections[c.key] || [];
+        const mine = entries.find(e=>e.idx===idx);
+        if(mine){
+          if(mine.type==='월차') wolcha++;
+          if(mine.type==='조퇴'){ jotoe++; jotoeHours += mine.hours||1; }
+        }
       }
     }
-    return {wolcha,jotoe};
+    const wle = computeWeeklyEarlyLeave(idx, state.monthData, y, m);
+    return {wolcha, jotoe, jotoeHours, autoLeaveUsed: wle.autoLeaveUsed};
   }
 
   const monthDataCache = {};
@@ -1843,32 +1968,32 @@
   }
   async function personalYearlyCounts(idx){
     const y = state.year;
-    let wolcha=0, jotoe=0;
+    let wolcha=0, jotoe=0, jotoeHours=0, autoLeaveUsed=0;
     try {
       for(let mm=1; mm<=state.month; mm++){
         const data = await getMonthDataForYear(y, mm);
         const dim = daysInMonth(y, mm);
-        const tempH = (data && data.tempHolidays) ? data.tempHolidays : [];
-        const fixedO = (data && data.fixedOverrides) ? data.fixedOverrides : {};
-        const selMap = (data && data.selections) ? data.selections : {};
-
         for(let d=1; d<=dim; d++){
           const dow = new Date(y, mm-1, d).getDay();
           const isFixedWeekly = dow===2 || dow===3;
           const key = dateKey(y, mm, d);
-          const isTemp = tempH.includes(key);
+          const isTemp = (data.tempHolidays||[]).includes(key);
           if(isFixedWeekly){
-            const ov = fixedO[key] || {};
-            if(ov[idx]==='월차') wolcha++;
-            if(ov[idx]==='조퇴') jotoe++;
+            const ov = (data.fixedOverrides||{})[key] || {};
+            const v = ov[idx];
+            const type = v ? (typeof v==='object' ? v.type : v) : null;
+            if(type==='월차') wolcha++;
+            if(type==='조퇴'){ jotoe++; jotoeHours += typeof v==='object' ? (v.hours||1) : 1; }
           } else if(!isTemp){
-            const mine = (selMap[key]||[]).find(e=>e.idx===idx);
-            if(mine){ if(mine.type==='월차') wolcha++; if(mine.type==='조퇴') jotoe++; }
+            const mine = ((data.selections||{})[key]||[]).find(e=>e.idx===idx);
+            if(mine){ if(mine.type==='월차') wolcha++; if(mine.type==='조퇴'){ jotoe++; jotoeHours += mine.hours||1; } }
           }
         }
+        const wle = computeWeeklyEarlyLeave(idx, data, y, mm);
+        autoLeaveUsed += wle.autoLeaveUsed;
       }
     } catch(e) { console.warn("personalYearlyCounts Error:", e); }
-    return {wolcha,jotoe};
+    return {wolcha, jotoe, jotoeHours, autoLeaveUsed};
   }
 
   // ---------- render dispatch ----------
@@ -1903,6 +2028,7 @@
 
     for(let i=0; i<STAFF_COUNT; i++){
       const name = state.staffNames[i];
+      if(isPlaceholderStaffName(name, i)) continue;
       if(c.isFixedWeekly){
         const ov = state.monthData.fixedOverrides[c.key] || {};
         const v = ov[i];
@@ -1946,9 +2072,11 @@
     document.getElementById('topStats').innerHTML = `
       <div class="tcard"><div class="l">화·수 정기휴무</div><div class="v">${s.fixedTotal}일</div><div class="sub">화 ${s.tue} · 수 ${s.wed}</div></div>
       <div class="tcard highlight"><div class="l">추가 휴무일 (참고)</div><div class="v">${s.extraOff}일</div><div class="sub">(토${s.sat}+일${s.sun}+공휴일${s.legalForCompare}=${s.comparePool}) − 화수${s.fixedTotal} = ${s.baseExtraOff}일<br>+ 등록된 대체휴일 ${s.temp}일 = ${s.extraOff}일<br>공휴일은 토·일·화·수 제외</div></div>
-      <div class="tcard"><div class="l">법정공휴일</div><div class="v">${s.legal}일</div></div>
-      <div class="tcard"><div class="l">대체휴일</div><div class="v">${s.temp}일</div></div>
-      <div class="tcard"><div class="l">근무일수</div><div class="v">${s.workdays}일</div></div>
+      <div class="tcard wide triple-card">
+        <div class="triple-item"><div class="l">법정공휴일</div><div class="v">${s.legal}일</div></div>
+        <div class="triple-item"><div class="l">대체휴일</div><div class="v">${s.temp}일</div></div>
+        <div class="triple-item"><div class="l">근무일수</div><div class="v">${s.workdays}일</div></div>
+      </div>
       <div class="tcard wide" id="m-todayWorkerCard" style="cursor:pointer;background:linear-gradient(135deg, #2C5F6F, #1E4652);color:#fff;border-color:#1E4652;">
         <div class="l" style="color:#CFE3E7;display:flex;justify-content:space-between;align-items:center;">
           <span>👥 ${dayLabel} 근무자 명단</span>
@@ -1999,11 +2127,18 @@
         const exIdx = Object.keys(overrides).map(k=>parseInt(k,10));
         body += `<div class="chip-wrap">`;
         body += exIdx.length===0 ? `<span class="chip all">전원 정기휴무</span>` :
-          exIdx.map(i=>`<span class="chip">${maskNameSheet(state.staffNames[i])}<span class="tag">${overrides[i]}</span><button data-day="${d}" data-idx="${i}" class="fixedRm">×</button></span>`).join('');
+          exIdx.map(i=>{
+            const ovVal = overrides[i];
+            const ovType = typeof ovVal === 'object' ? ovVal.type : ovVal;
+            const ovHours = typeof ovVal === 'object' ? (ovVal.hours||1) : 1;
+            const tagTxt = ovType === '조퇴' ? `조퇴 ${ovHours}h` : ovType;
+            return `<span class="chip">${maskNameSheet(state.staffNames[i])}<span class="tag">${tagTxt}</span><button data-day="${d}" data-idx="${i}" class="fixedRm">×</button></span>`;
+          }).join('');
         body += `</div>
-        <div class="add-row">
-          <select class="fixedAddName" data-day="${d}"><option value="">직원 선택</option><option value="all">전체 선택 (${STAFF_COUNT}명)</option>${state.staffNames.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select>
+        <div class="add-row" style="align-items:center;">
+          <select class="fixedAddName" data-day="${d}"><option value="">직원 선택</option><option value="all">전체 선택 (${realStaffCount()}명)</option>${realStaffIndices().map(i=>`<option value="${i}">${state.staffNames[i]}</option>`).join('')}</select>
           <select class="fixedAddType" data-day="${d}">${FIXED_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
+          <input type="number" class="m-fixedAddHours" data-day="${d}" min="0.5" max="8" step="0.5" value="1" placeholder="시간(h)" title="조퇴 시간(h)" style="width:68px;padding:8px 6px;border:1px solid var(--line);border-radius:8px;font-size:18px;background:var(--bg);display:none;">
           <button class="fixedAddBtn" data-day="${d}">추가</button>
         </div>`;
       } else if(c.isTemp){
@@ -2013,17 +2148,20 @@
         const usedIdx = entries.map(e=>e.idx);
         body += `<div class="chip-wrap">`;
         body += entries.length===0 ? `<span class="note" style="margin:0;">신청자 없음</span>` :
-          entries.map(e=>`<span class="chip">${maskNameSheet(state.staffNames[e.idx])}<span class="tag">${e.type}</span><button data-day="${d}" data-idx="${e.idx}" class="rmSel">×</button></span>`).join('');
+          entries.map(e=>{
+            const tagTxt = e.type === '조퇴' ? `조퇴 ${e.hours||1}h` : e.type;
+            return `<span class="chip">${maskNameSheet(state.staffNames[e.idx])}<span class="tag">${tagTxt}</span><button data-day="${d}" data-idx="${e.idx}" class="rmSel">×</button></span>`;
+          }).join('');
         body += `</div>`;
         const full = entries.length >= MAX_OFF_WORKDAY;
-        const remaining = MAX_OFF_WORKDAY - entries.length;
-        body += `<div class="add-row">
+        body += `<div class="add-row" style="align-items:center;">
           <select class="addName" data-day="${d}" ${full?'disabled':''}>
-            <option value="">${full?'정원(15명) 마감':'직원 선택'}</option>
+            <option value="">${full?`정원(${realStaffCount()}명) 마감`:'직원 선택'}</option>
             ${full ? '' : `<option value="all">전체 선택</option>`}
-            ${state.staffNames.map((n,i)=>usedIdx.includes(i)?'':`<option value="${i}">${n}</option>`).join('')}
+            ${realStaffIndices().map(i=>usedIdx.includes(i)?'':`<option value="${i}">${state.staffNames[i]}</option>`).join('')}
           </select>
           <select class="addType" data-day="${d}" ${full?'disabled':''}>${LEAVE_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
+          <input type="number" class="m-addHours" data-day="${d}" min="0.5" max="8" step="0.5" value="1" placeholder="시간(h)" title="조퇴 시간(h)" style="width:68px;padding:8px 6px;border:1px solid var(--line);border-radius:8px;font-size:18px;background:var(--bg);display:none;" ${full?'disabled':''}>
           <button class="addBtn" data-day="${d}" ${full?'disabled':''}>추가</button>
         </div>`;
       }
@@ -2038,6 +2176,19 @@
     }
     main.innerHTML = html;
 
+    main.querySelectorAll('.fixedAddType').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const hInp = sel.closest('.add-row').querySelector('.m-fixedAddHours');
+        if(hInp) hInp.style.display = sel.value === '조퇴' ? 'inline-block' : 'none';
+      });
+    });
+    main.querySelectorAll('.addType').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const hInp = sel.closest('.add-row').querySelector('.m-addHours');
+        if(hInp) hInp.style.display = sel.value === '조퇴' ? 'inline-block' : 'none';
+      });
+    });
+
     main.querySelectorAll('.fixedRm').forEach(btn=>btn.addEventListener('click', async ()=>{
       const d=parseInt(btn.dataset.day,10), idx=parseInt(btn.dataset.idx,10), key=dateKey(y,m,d);
       if(state.monthData.fixedOverrides[key]) delete state.monthData.fixedOverrides[key][idx];
@@ -2048,17 +2199,20 @@
       const cardBody = btn.closest('.card');
       const nameSel = cardBody.querySelector('.fixedAddName');
       const typeSel = cardBody.querySelector('.fixedAddType');
+      const hoursInp = cardBody.querySelector('.m-fixedAddHours');
       if(!nameSel.value){ showToast('직원을 선택해주세요.'); return; }
       const type=typeSel.value, key=dateKey(y,m,d);
+      const hours = (type === '조퇴' && hoursInp) ? (parseFloat(hoursInp.value) || 1) : 1;
+      const entryVal = type === '조퇴' ? { type: '조퇴', hours } : type;
       if(!state.monthData.fixedOverrides[key]) state.monthData.fixedOverrides[key]={};
       if(nameSel.value === 'all'){
-        for(let idx=0; idx<STAFF_COUNT; idx++){
-          if(type==='정기휴무') delete state.monthData.fixedOverrides[key][idx]; else state.monthData.fixedOverrides[key][idx]=type;
-        }
-        showToast(`전체 ${STAFF_COUNT}명에게 '${type}' 적용했습니다.`);
+        realStaffIndices().forEach(idx=>{
+          if(type==='정기휴무') delete state.monthData.fixedOverrides[key][idx]; else state.monthData.fixedOverrides[key][idx]=entryVal;
+        });
+        showToast(`전체 ${realStaffCount()}명에게 '${type}' 적용했습니다.`);
       } else {
         const idx=parseInt(nameSel.value,10);
-        if(type==='정기휴무') delete state.monthData.fixedOverrides[key][idx]; else state.monthData.fixedOverrides[key][idx]=type;
+        if(type==='정기휴무') delete state.monthData.fixedOverrides[key][idx]; else state.monthData.fixedOverrides[key][idx]=entryVal;
       }
       await saveMonthData(); renderSignup(); renderTopStats();
     }));
@@ -2072,26 +2226,32 @@
       const cardBody = btn.closest('.card');
       const nameSel = cardBody.querySelector('.addName');
       const typeSel = cardBody.querySelector('.addType');
+      const hoursInp = cardBody.querySelector('.m-addHours');
       if(!nameSel.value){ showToast('직원을 선택해주세요.'); return; }
       const type=typeSel.value, key=dateKey(y,m,d);
+      const hours = (type === '조퇴' && hoursInp) ? (parseFloat(hoursInp.value) || 1) : 1;
       const arr = state.monthData.selections[key] || [];
       if(nameSel.value === 'all'){
         const remaining = MAX_OFF_WORKDAY - arr.length;
         if(remaining <= 0){ showToast('이미 15명(전원) 신청했습니다.'); return; }
         const usedIdx = arr.map(e=>e.idx);
-        const candidates = state.staffNames.map((_,i)=>i).filter(i=>!usedIdx.includes(i));
+        const candidates = realStaffIndices().filter(i=>!usedIdx.includes(i));
         const toAdd = candidates.slice(0, remaining);
-        toAdd.forEach(idx => arr.push({idx, type}));
+        toAdd.forEach(idx => {
+          arr.push(type === '조퇴' ? { idx, type, hours } : { idx, type });
+        });
         state.monthData.selections[key] = arr;
         if(candidates.length > toAdd.length){
-          showToast(`정원(15명)으로 인해 ${toAdd.length}명만 '${type}' 적용했습니다.`);
+          showToast(`정원(${realStaffCount()}명)으로 인해 ${toAdd.length}명만 '${type}' 적용했습니다.`);
         } else {
           showToast(`${toAdd.length}명에게 '${type}' 적용했습니다.`);
         }
       } else {
         const idx=parseInt(nameSel.value,10);
         if(arr.length >= MAX_OFF_WORKDAY){ showToast('이미 15명(전원) 신청했습니다.'); return; }
-        if(!arr.some(e=>e.idx===idx)) arr.push({idx,type});
+        if(!arr.some(e=>e.idx===idx)){
+          arr.push(type === '조퇴' ? { idx, type, hours } : { idx, type });
+        }
         state.monthData.selections[key] = arr;
       }
       await saveMonthData(); renderSignup(); renderTopStats();
@@ -2103,13 +2263,24 @@
     const y=state.year, m=state.month, dim=daysInMonth(y,m);
     const main = document.getElementById('m-mainArea');
     const firstDow = new Date(y,m-1,1).getDay();
+    const realEmpIdx = realStaffIndices();
+    if(!realEmpIdx.includes(state.selectedEmp)) state.selectedEmp = realEmpIdx.length ? realEmpIdx[0] : 0;
 
     let totalWorkDays=0, holidayWork=0;
     for(let d=1; d<=dim; d++){
       const c = classify(y,m,d);
-      if(c.isFixedWeekly || c.isTemp) continue;
+      if(c.isFixedWeekly){
+        const type = typeForFixed(c, state.selectedEmp);
+        if(type === '대체' || type === '조퇴'){
+          totalWorkDays++;
+          if(c.isLegal) holidayWork++;
+        }
+        continue;
+      }
+      if(c.isTemp) continue;
       const mine = (state.monthData.selections[c.key]||[]).find(e=>e.idx===state.selectedEmp);
       if(!mine){ totalWorkDays++; if(c.isLegal) holidayWork++; }
+      else if(mine.type === '조퇴'){ totalWorkDays++; if(c.isLegal) holidayWork++; }
     }
     const yearly = await personalYearlyCounts(state.selectedEmp);
 
@@ -2119,26 +2290,35 @@
       const c = classify(y,m,d);
       let cls='mini-cell'; let label='';
       if(c.dow===0||c.dow===6) cls+=' weekend';
-      if(c.isFixedWeekly){ cls+=' off-fixed'; label=boardLabel(typeForFixed(c,state.selectedEmp)); }
+      if(c.isFixedWeekly){
+        cls+=' off-fixed';
+        label=boardLabel(typeForFixed(c,state.selectedEmp), hoursForFixed(c,state.selectedEmp));
+      }
       else if(c.isTemp){ cls+=' off-fixed'; label='휴무'; }
       else {
         const mine=(state.monthData.selections[c.key]||[]).find(e=>e.idx===state.selectedEmp);
-        if(mine){ cls+=' off-extra'; label=boardLabel(mine.type); }
+        if(mine){
+          cls+=' off-extra';
+          label=boardLabel(mine.type, mine.hours || 1);
+        }
       }
       calCells += `<div class="${cls}"><span class="dnum">${d}</span><span>${label}</span></div>`;
     }
 
+    const totalWolchaYear = yearly.wolcha + yearly.autoLeaveUsed;
+    const wolchaTxt = yearly.autoLeaveUsed > 0 ? `${totalWolchaYear}(+${yearly.autoLeaveUsed})` : `${totalWolchaYear}`;
+
     main.innerHTML = `
       <div class="emp-select-row">
-        <select id="m-empSelect">${state.staffNames.map((n,i)=>`<option value="${i}" ${i===state.selectedEmp?'selected':''}>${n}</option>`).join('')}</select>
+        <select id="m-empSelect">${realEmpIdx.map(i=>`<option value="${i}" ${i===state.selectedEmp?'selected':''}>${state.staffNames[i]}</option>`).join('')}</select>
       </div>
       <div class="stat-strip">
         <div class="stat-mini"><div class="l">총근무일</div><div class="v">${totalWorkDays}일</div></div>
         <div class="stat-mini"><div class="l">공휴일근무</div><div class="v">${holidayWork}일</div></div>
-        <div class="stat-mini"><div class="l">월차/조퇴(연간)</div><div class="v">${yearly.wolcha}/${yearly.jotoe}</div></div>
+        <div class="stat-mini"><div class="l">월차(소진)/조퇴(연간)</div><div class="v">${wolchaTxt}/${yearly.jotoe}회(${yearly.jotoeHours}h)</div></div>
       </div>
       <div class="mini-cal">${calCells}</div>
-      <p class="note">화·수·대체휴일은 회색, 개별 신청 휴무는 파란색으로 표시됩니다. 월차/조퇴는 1월부터 현재 달까지 누적된 값입니다. 상단에서 직원을 바꿔가며 확인할 수 있어요.</p>
+      <p class="note">화·수·대체휴일은 회색, 개별 신청 휴무는 파란색으로 표시됩니다. 주간(일~토) 조퇴 합계가 8시간을 초과하면 월차 1개가 자동 소진됩니다. 상단에서 직원을 바꿔가며 확인할 수 있어요.</p>
     `;
     document.getElementById('m-empSelect').addEventListener('change', (e)=>{
       state.selectedEmp = parseInt(e.target.value,10);
@@ -2152,7 +2332,7 @@
   // 대체: 정기휴무일 근무 시 정상 근무(일당+교통비), 그 대가로 쉬는 근무일은 무급
   // 월차: 일당은 지급하되 교통비는 미지급
   // 정기휴무(기본값)·휴무·병가·결근: 일당·교통비 모두 미지급 (무급)
-  // 병가 발생 주는 주휴수당 제외 / 조퇴는 출근한 것으로 보아 정상 근무(일당+교통비) 처리
+  // 병가 발생 주는 주휴수당 제외 / 조퇴는 출근한 것으로 보아 정상 근무(일당+교통비) 처리 (주간 8시간 초과 시 월차 1개 자동 소진)
   function won(n){ return Math.round(n).toLocaleString('ko-KR')+'원'; }
   function maskName(name){
     const len = name.length;
@@ -2168,8 +2348,7 @@
       const c=classify(y,m,d);
       const weekKey = d - c.dow;
       if(c.isFixedWeekly){
-        const ov = state.monthData.fixedOverrides[c.key] || {};
-        const type = ov[idx] || '정기휴무';
+        const type = typeForFixed(c, idx);
         if(type === '대체'){
           substituteWorkedDays++;
           if(c.isLegal) substituteHolidayWorkedDays++;
@@ -2189,6 +2368,8 @@
       else if(mine.type === '월차'){ monthlyLeaveDays++; }
       else { unpaidDays++; if(mine.type==='병가') weeksWithSickLeave.add(weekKey); } // 휴무·병가·결근
     }
+    const wle = computeWeeklyEarlyLeave(idx, state.monthData, y, m);
+    monthlyLeaveDays += wle.autoLeaveUsed;
     const regularDays = actualWorkDays - holidayWorkDays;
     const regularWage = regularDays * PAY.dailyWage;
     const holidayWage = holidayWorkDays * PAY.dailyWage * PAY.holidayMultiplier;
@@ -2212,6 +2393,7 @@
       <button data-mode="partial" class="${state.payrollMode==='partial'?'active':''}">국민연금·건보 미포함</button>
     </div>`;
     state.staffNames.forEach((name,i)=>{
+      if(isPlaceholderStaffName(name, i)) return;
       const p = computePayroll(i);
       const net = state.payrollMode==='full' ? p.netFull : p.netPartial;
       html += `<details class="pay-card">
@@ -2270,10 +2452,12 @@
     const counts = await Promise.all(state.staffNames.map((_,i)=>personalYearlyCounts(i)));
     wrap.innerHTML = state.staffNames.map((n,i)=>{
       const cnt = counts[i];
+      const totalLeave = cnt.wolcha + cnt.autoLeaveUsed;
+      const autoNote = cnt.autoLeaveUsed > 0 ? ` (+${cnt.autoLeaveUsed})` : '';
       return `<div class="roster-item">
         <span class="rnum">${i+1}</span>
         <input type="text" data-idx="${i}" value="${maskNameBoard(n).replace(/"/g,'&quot;')}" maxlength="2" title="직원 이름은 2글자까지만 입력됩니다.">
-        <span class="rcount">월차<strong>${cnt.wolcha}</strong>·조퇴<strong>${cnt.jotoe}</strong> (연간)</span>
+        <span class="rcount">월차<strong>${totalLeave}</strong>${autoNote} · 조퇴<strong>${cnt.jotoe}회(${cnt.jotoeHours}h)</strong></span>
       </div>`;
     }).join('');
     wrap.querySelectorAll('input').forEach(inp=>{
@@ -2399,6 +2583,7 @@
 
       for(var i=0; i<15; i++){
         var name = staffNames[i] || ('직원' + (i+1));
+        if(!name || name === ('직원' + (i+1))) continue;
         if(isFixedWeekly){
           var ov = (mData.fixedOverrides || {})[key] || {};
           var v = ov[i];
@@ -2455,23 +2640,6 @@
           offList.map(function(w){ return '<div class="w-chip ' + w.cls + '"><span>' + w.name + '</span><span class="w-tag">' + w.tag + '</span></div>'; }).join('');
       }
 
-      var copyBtn = document.getElementById('copyWorkerListBtn');
-      if(copyBtn){
-        copyBtn.onclick = function(){
-          var workNames = workingList.map(function(w){ return (w.tag === '정상출근' || w.tag === '공휴일근무') ? w.name : (w.name + '(' + w.tag + ')'); }).join(', ') || '없음';
-          var offNames = offList.map(function(w){ return w.name + '(' + w.tag + ')'; }).join(', ') || '없음';
-          var text = '[A조 ' + y + '년 ' + m + '월 ' + d + '일 (' + DOW[dow] + ') 근무자 현황]\n- 구분: ' + categoryBadge + '\n- 출근(' + workingList.length + '명): ' + workNames + '\n- 휴무(' + offList.length + '명): ' + offNames;
-          if(navigator.clipboard && navigator.clipboard.writeText){
-            navigator.clipboard.writeText(text).then(function(){
-              alert('근무자 명단이 클립보드에 복사되었습니다!\n(카톡 등에 붙여넣기 가능)');
-            }).catch(function(){
-              prompt('아래 텍스트를 복사하세요:', text);
-            });
-          } else {
-            prompt('아래 텍스트를 복사하세요:', text);
-          }
-        };
-      }
     }
 
     function setupGlobalModalEvents(){
