@@ -536,6 +536,7 @@
           <button id="m-saveFbBtn" style="background:var(--sat);width:100%;">설정 저장 및 연결</button>
         </div>
         <div id="m-fbStatus" class="note" style="margin-top:6px;font-weight:700;">연동 상태: 로컬 저장소 사용 중</div>
+        <button id="m-resetMonthBtn" style="background:none;border:1px solid var(--warn,#B23A3A);color:var(--warn,#B23A3A);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;width:100%;margin-top:10px;">이번 달 동기화 데이터 초기화 (버튼이 먹통일 때)</button>
       </div>
     </div>
   </div>
@@ -2169,12 +2170,24 @@
 
   function render(){
     document.getElementById('m-monthLabel').textContent = `${state.year}년 ${state.month}월`;
-    renderTopStats();
-    renderHolidayChips();
-    renderRoster();
-    if(state.activeTab==='signup') renderSignup();
-    else if(state.activeTab==='board') renderBoard();
-    else renderPayroll();
+    try { renderTopStats(); } catch(e){ console.warn('[render] renderTopStats failed:', e); }
+    try { renderHolidayChips(); } catch(e){ console.warn('[render] renderHolidayChips failed:', e); }
+    try { renderRoster(); } catch(e){ console.warn('[render] renderRoster failed:', e); }
+    try {
+      if(state.activeTab==='signup') renderSignup();
+      else if(state.activeTab==='board') renderBoard();
+      else renderPayroll();
+    } catch(e){
+      console.warn('[render] tab content render failed for', state.year, state.month, e);
+      const main = document.getElementById('m-mainArea');
+      if(main){
+        main.innerHTML = `<div class="card" style="text-align:center;padding:24px 16px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">이번 달 데이터를 불러오는 중 문제가 발생했습니다.</div>
+          <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">설정에서 "이번 달 동기화 데이터 초기화"를 시도하거나, 다른 달로 이동 후 다시 돌아와 보세요.</div>
+          <button onclick="location.reload()" style="background:var(--accent,#2C5F6F);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;">새로고침</button>
+        </div>`;
+      }
+    }
   }
 
   // ---------- SIGNUP TAB ----------
@@ -2586,6 +2599,17 @@
     });
     render();
   };
+  window.__resetCurrentMonthSync = async function(){
+    const key = monthKey(state.year, state.month);
+    try{ localStorage.removeItem(LS_PREFIX + key); }catch(e){}
+    delete memoryFallback[key];
+    if(firebaseDb){
+      try{
+        const dbKey = safeDbKey(key);
+        await firebaseDb.ref(TEAM_KEY + '/' + dbKey).remove();
+      }catch(e){ console.warn('[reset] failed to clear remote month data:', e); }
+    }
+  };
 })();
 
 </script>
@@ -2743,6 +2767,19 @@
           var config = { databaseURL: url, apiKey: apiKey };
           localStorage.setItem('fb-config-json', JSON.stringify(config));
           alert('Firebase 설정이 저장되었습니다. 앱을 다시 시작합니다.');
+          location.reload();
+        });
+      }
+      var resetMonthBtn = document.getElementById('m-resetMonthBtn');
+      if(resetMonthBtn){
+        resetMonthBtn.addEventListener('click', async function(){
+          if(!confirm('이번 달의 동기화된 데이터를 초기화합니다.\n(휴무 신청/설정이 초기화될 수 있습니다. 계속할까요?)')) return;
+          try{
+            if(window.__resetCurrentMonthSync) await window.__resetCurrentMonthSync();
+            alert('이번 달 데이터를 초기화했습니다. 앱을 다시 시작합니다.');
+          }catch(e){
+            alert('초기화 중 문제가 발생했습니다. 그래도 새로고침합니다.');
+          }
           location.reload();
         });
       }
