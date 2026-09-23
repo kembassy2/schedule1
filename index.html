@@ -618,6 +618,24 @@
   const LS_PREFIX = 'team-schedule::';
   let firebaseDb = null;
   let isFirebaseSyncing = false;
+  let renderCbBusy = false;
+  let renderCbPending = false;
+  function scheduleRenderCb(renderCb) {
+    if (!renderCb) return;
+    if (renderCbBusy) { renderCbPending = true; return; } // coalesce overlapping sync events
+    renderCbBusy = true;
+    Promise.resolve().then(renderCb).then(()=>{
+      console.log("[FB sync] renderCb completed OK.");
+    }).catch(renderErr => {
+      console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
+    }).finally(()=>{
+      renderCbBusy = false;
+      if (renderCbPending) {
+        renderCbPending = false;
+        scheduleRenderCb(renderCb);
+      }
+    });
+  }
 
   function safeDbKey(key) {
     return key.replace(/\./g, '__dot__')
@@ -690,11 +708,7 @@
                 isFirebaseSyncing = false;
               }
               if (renderCb) {
-                Promise.resolve().then(renderCb).then(()=>{
-                  console.log("[FB sync] renderCb completed OK.");
-                }).catch(renderErr => {
-                  console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
-                });
+                scheduleRenderCb(renderCb);
               }
             }
           } catch(cbErr) {
@@ -1707,6 +1721,24 @@
   const LS_PREFIX = 'team-schedule::';
   let firebaseDb = null;
   let isFirebaseSyncing = false;
+  let renderCbBusy = false;
+  let renderCbPending = false;
+  function scheduleRenderCb(renderCb) {
+    if (!renderCb) return;
+    if (renderCbBusy) { renderCbPending = true; return; } // coalesce overlapping sync events
+    renderCbBusy = true;
+    Promise.resolve().then(renderCb).then(()=>{
+      console.log("[FB sync] renderCb completed OK.");
+    }).catch(renderErr => {
+      console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
+    }).finally(()=>{
+      renderCbBusy = false;
+      if (renderCbPending) {
+        renderCbPending = false;
+        scheduleRenderCb(renderCb);
+      }
+    });
+  }
 
   function safeDbKey(key) {
     return key.replace(/\./g, '__dot__')
@@ -1779,11 +1811,7 @@
                 isFirebaseSyncing = false;
               }
               if (renderCb) {
-                Promise.resolve().then(renderCb).then(()=>{
-                  console.log("[FB sync] renderCb completed OK.");
-                }).catch(renderErr => {
-                  console.warn("[FB sync] renderCb threw (this is the bug to report!):", renderErr);
-                });
+                scheduleRenderCb(renderCb);
               }
             }
           } catch(cbErr) {
